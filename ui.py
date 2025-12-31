@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+from PIL import Image, ImageTk
 
 from crypto.keygen import generate_keypair
 from crypto.encrypt import encrypt_message
@@ -37,6 +38,11 @@ class PQCStegoUI:
             width=28
         ).pack(pady=8)
 
+        # ---- Cover Image ----
+        tk.Label(sender_frame, text="Cover Image").pack()
+        self.cover_image_label = tk.Label(sender_frame)
+        self.cover_image_label.pack(pady=5)
+
         # ================== Receiver ==================
         receiver_frame = tk.LabelFrame(root, text="Receiver", padx=12, pady=12)
         receiver_frame.grid(row=0, column=1, padx=10, pady=10)
@@ -48,8 +54,12 @@ class PQCStegoUI:
             width=28
         ).pack(pady=8)
 
-        tk.Label(receiver_frame, text="Decrypted Message").pack()
+        # ---- Stego Image ----
+        tk.Label(receiver_frame, text="Stego Image").pack()
+        self.stego_image_label = tk.Label(receiver_frame)
+        self.stego_image_label.pack(pady=5)
 
+        tk.Label(receiver_frame, text="Decrypted Message").pack()
         self.output_text = tk.Text(receiver_frame, height=6, width=42)
         self.output_text.pack()
 
@@ -60,6 +70,18 @@ class PQCStegoUI:
             fg="blue"
         )
         self.status_label.grid(row=1, column=0, columnspan=2, pady=6)
+
+        # Show cover image on startup
+        self.show_image("images/cover.png", self.cover_image_label)
+
+    # ================== Image Helper ==================
+    def show_image(self, path, label):
+        img = Image.open(path)
+        img = img.resize((250, 250))
+        photo = ImageTk.PhotoImage(img)
+
+        label.image = photo  # prevent garbage collection
+        label.config(image=photo)
 
     # ================== Sender Logic ==================
     def encrypt_and_embed(self):
@@ -82,8 +104,11 @@ class PQCStegoUI:
                 "images/stego.png"
             )
 
+            # Show stego image after embedding
+            self.show_image("images/stego.png", self.stego_image_label)
+
             self.status_label.config(
-                text="Status: Message encrypted, signed, and embedded successfully",
+                text="Status: Message encrypted, signed, and embedded",
                 fg="green"
             )
 
@@ -123,9 +148,9 @@ class PQCStegoUI:
 # ================== MAIN ==================
 if __name__ == "__main__":
     root = tk.Tk()
+    root.geometry("920x420")
 
-    # Force window visibility (Linux fix)
-    root.geometry("920x360")
+    # Force visibility (Linux window manager fix)
     root.lift()
     root.attributes("-topmost", True)
     root.after(300, lambda: root.attributes("-topmost", False))
