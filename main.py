@@ -1,1 +1,1 @@
-print("Quantum-Resistant Steganography Project")
+print("LATTICE-BASED POST-QUANTUM STEGANOGRAPHIC SECURITY FRAMEWORK")
