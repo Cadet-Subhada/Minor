@@ -3,3 +3,5 @@ __pycache__/
 *.key
 .env
 venv/
+*.swp
+images/stego.png
