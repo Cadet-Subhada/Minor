@@ -76,8 +76,8 @@ class PQCStegoUI:
         )
         self.status_label.grid(row=1, column=0, columnspan=2, pady=6)
 
-        # Show cover image on startup
-        self.show_image("images/cover.png", self.cover_image_label)
+        # ---- Show Cover Image on startup ----
+        self.show_image("images/Cover.png", self.cover_image_label)
 
     # ================== Image Helper ==================
     def show_image(self, path, label):
@@ -85,7 +85,7 @@ class PQCStegoUI:
         img = img.resize((250, 250))
         photo = ImageTk.PhotoImage(img)
 
-        label.image = photo
+        label.image = photo  # prevent garbage collection
         label.config(image=photo)
 
     # ================== Sender Logic ==================
@@ -103,22 +103,23 @@ class PQCStegoUI:
                 self.sign_private_key
             )
 
-            # ---- Display encrypted data (Base64) ----
+            # ---- Display encrypted data ----
             encoded_cipher = base64.b64encode(ciphertext).decode()
             self.cipher_text.delete("1.0", tk.END)
             self.cipher_text.insert(tk.END, encoded_cipher)
 
             # ---- Embed into image ----
             embed_data(
-                "images/cover.png",
+                "images/Cover.png",
                 ciphertext,
                 "images/stego.png"
             )
 
+            # ---- Show stego image ----
             self.show_image("images/stego.png", self.stego_image_label)
 
             self.status_label.config(
-                text="Status: Message encrypted and embedded",
+                text="Status: Message encrypted, signed, and embedded",
                 fg="green"
             )
 
@@ -160,6 +161,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     root.geometry("920x520")
 
+    # Force window visibility (Linux WM fix)
     root.lift()
     root.attributes("-topmost", True)
     root.after(300, lambda: root.attributes("-topmost", False))
