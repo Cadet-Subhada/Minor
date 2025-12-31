@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
+import base64
 
 from crypto.keygen import generate_keypair
 from crypto.encrypt import encrypt_message
@@ -27,8 +28,7 @@ class PQCStegoUI:
         sender_frame.grid(row=0, column=0, padx=10, pady=10)
 
         tk.Label(sender_frame, text="Message to Send").pack()
-
-        self.message_entry = tk.Text(sender_frame, height=6, width=42)
+        self.message_entry = tk.Text(sender_frame, height=5, width=42)
         self.message_entry.pack()
 
         tk.Button(
@@ -36,7 +36,12 @@ class PQCStegoUI:
             text="Encrypt, Sign & Embed",
             command=self.encrypt_and_embed,
             width=28
-        ).pack(pady=8)
+        ).pack(pady=6)
+
+        # ---- Encrypted Data ----
+        tk.Label(sender_frame, text="Encrypted Data (Base64)").pack()
+        self.cipher_text = tk.Text(sender_frame, height=5, width=42)
+        self.cipher_text.pack(pady=5)
 
         # ---- Cover Image ----
         tk.Label(sender_frame, text="Cover Image").pack()
@@ -52,7 +57,7 @@ class PQCStegoUI:
             text="Extract, Verify & Decrypt",
             command=self.extract_and_decrypt,
             width=28
-        ).pack(pady=8)
+        ).pack(pady=6)
 
         # ---- Stego Image ----
         tk.Label(receiver_frame, text="Stego Image").pack()
@@ -60,7 +65,7 @@ class PQCStegoUI:
         self.stego_image_label.pack(pady=5)
 
         tk.Label(receiver_frame, text="Decrypted Message").pack()
-        self.output_text = tk.Text(receiver_frame, height=6, width=42)
+        self.output_text = tk.Text(receiver_frame, height=5, width=42)
         self.output_text.pack()
 
         # ================== Status ==================
@@ -80,7 +85,7 @@ class PQCStegoUI:
         img = img.resize((250, 250))
         photo = ImageTk.PhotoImage(img)
 
-        label.image = photo  # prevent garbage collection
+        label.image = photo
         label.config(image=photo)
 
     # ================== Sender Logic ==================
@@ -98,17 +103,22 @@ class PQCStegoUI:
                 self.sign_private_key
             )
 
+            # ---- Display encrypted data (Base64) ----
+            encoded_cipher = base64.b64encode(ciphertext).decode()
+            self.cipher_text.delete("1.0", tk.END)
+            self.cipher_text.insert(tk.END, encoded_cipher)
+
+            # ---- Embed into image ----
             embed_data(
                 "images/cover.png",
                 ciphertext,
                 "images/stego.png"
             )
 
-            # Show stego image after embedding
             self.show_image("images/stego.png", self.stego_image_label)
 
             self.status_label.config(
-                text="Status: Message encrypted, signed, and embedded",
+                text="Status: Message encrypted and embedded",
                 fg="green"
             )
 
@@ -148,9 +158,8 @@ class PQCStegoUI:
 # ================== MAIN ==================
 if __name__ == "__main__":
     root = tk.Tk()
-    root.geometry("920x420")
+    root.geometry("920x520")
 
-    # Force visibility (Linux window manager fix)
     root.lift()
     root.attributes("-topmost", True)
     root.after(300, lambda: root.attributes("-topmost", False))
