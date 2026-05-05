@@ -1,4 +1,5 @@
 from crypto.keygen import generate_keypair
+from crypto.signature import generate_signing_keypair
 from crypto.encrypt import encrypt_message
 from crypto.decrypt import decrypt_message
 from stego.embed import embed_data
@@ -10,9 +11,14 @@ def main():
 
     print("\n--- KEY GENERATION ---")
     public_key, private_key = generate_keypair()
+    sign_public_key, sign_private_key = generate_signing_keypair()
 
     print("\n--- ENCRYPTION ---")
-    ciphertext, shared_secret_enc = encrypt_message(public_key, message)
+    ciphertext, shared_secret_enc = encrypt_message(
+        public_key,
+        message,
+        sign_private_key
+    )
     print("Ciphertext length:", len(ciphertext))
 
     print("\n--- STEGANOGRAPHY EMBED ---")
@@ -27,7 +33,9 @@ def main():
 
     print("\n--- DECRYPTION ---")
     decrypted_message, shared_secret_dec = decrypt_message(
-        private_key, extracted_ciphertext
+        private_key,
+        extracted_ciphertext,
+        sign_public_key
     )
 
     print("\n--- RESULT ---")
