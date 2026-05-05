@@ -10,6 +10,8 @@ from crypto.decrypt import decrypt_message
 from crypto.signature import generate_signing_keypair, sign_message
 from stego.embed import embed_data
 from stego.extract import extract_data
+from metrics import calculate_image_metrics
+import time
 
 class PQCStegoUI:
     def __init__(self, root):
@@ -248,9 +250,12 @@ class PQCStegoUI:
 
         msg_bytes = msg.encode()
         signature = sign_message(self.sign_private_key, msg_bytes)
+
+        start = time.time()
         ciphertext, _ = encrypt_message(
             self.kem_public_key, msg_bytes, self.sign_private_key
         )
+        self.enc_time = time.time() - start
 
         cipher_hash = hashlib.sha256(ciphertext).hexdigest()
         self.blockchain.add_block(cipher_hash)
@@ -290,26 +295,16 @@ class PQCStegoUI:
         else:
             self.bc_status.config(text="Verified", bg="#2e7d32")
 
-        if received_hash != self.blockchain.chain[-1].data:
-            self.status_label.config(
-                text="BLOCKCHAIN VERIFICATION FAILED!",
-                bg="red"
-            )
-            return
-        else:
-            self.status_label.config(
-                text="BLOCKCHAIN VERIFIED",
-                bg="#2e7d32"
-            )
-
         self.receiver_cipher.config(state="normal")
         self.receiver_cipher.delete("1.0", tk.END)
         self.receiver_cipher.insert(tk.END, base64.b64encode(extracted).decode())
         self.receiver_cipher.config(state="disabled")
 
+        start = time.time()
         plaintext, signature = decrypt_message(
             self.kem_private_key, extracted, self.sign_public_key
         )
+        self.dec_time = time.time() - start
 
         self.receiver_signature.config(state="normal")
         self.receiver_signature.delete("1.0", tk.END)
@@ -321,8 +316,19 @@ class PQCStegoUI:
         self.output_text.insert(tk.END, plaintext.decode())
         self.output_text.config(state="disabled")
         self.status_label.config(
-            text="STATUS: DECRYPTION SUCCESSFUL",
+            text="STATUS: BLOCKCHAIN VERIFIED + DECRYPTION SUCCESSFUL",
             bg="#2e7d32"
+        )
+
+        # ================= METRICS POPUP =================
+        mse, psnr = calculate_image_metrics("images/Cover.png", "images/stego.png")
+
+        messagebox.showinfo(
+            "Performance Metrics",
+            f"MSE: {mse:.4f}\n"
+            f"PSNR: {psnr:.2f} dB\n"
+            f"Encryption Time: {self.enc_time:.4f} s\n"
+            f"Decryption Time: {self.dec_time:.4f} s"
         )
 
 # ================= MAIN =================
