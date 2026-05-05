@@ -2,14 +2,14 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import base64
-
+from blockchain import Blockchain
+import hashlib
 from crypto.keygen import generate_keypair
 from crypto.encrypt import encrypt_message
 from crypto.decrypt import decrypt_message
 from crypto.signature import generate_signing_keypair, sign_message
 from stego.embed import embed_data
 from stego.extract import extract_data
-
 
 class PQCStegoUI:
     def __init__(self, root):
@@ -18,6 +18,7 @@ class PQCStegoUI:
         self.root.title("Post-Quantum Secure Steganography")
         self.root.geometry("1450x850")
         self.root.configure(bg="#1e1e1e")
+        self.blockchain = Blockchain()
 
         root.grid_columnconfigure(0, weight=1)
         root.grid_columnconfigure(1, weight=1)
@@ -112,6 +113,48 @@ class PQCStegoUI:
         )
         nist.grid(row=1, column=2, padx=14, pady=10, sticky="n")
 
+        # ================= BLOCKCHAIN PANEL =================
+        block_panel = tk.LabelFrame(
+            root,
+            text=" BLOCKCHAIN VERIFICATION ",
+            bg="#2b2b2b",
+            fg="white",
+            font=("Helvetica", 11, "bold"),
+            padx=14,
+            pady=12
+        )
+        block_panel.grid(row=1, column=2, padx=14, pady=200, sticky="s")
+
+        tk.Label(block_panel, text="Stored Hash:",
+                fg="#cccccc", bg="#2b2b2b").pack(anchor="w")
+
+        self.bc_stored = tk.Label(
+            block_panel, text="-",
+            fg="#81c784", bg="#2b2b2b",
+            wraplength=250, justify="left"
+        )
+        self.bc_stored.pack(anchor="w", pady=4)
+
+        tk.Label(block_panel, text="Received Hash:",
+                fg="#cccccc", bg="#2b2b2b").pack(anchor="w")
+
+        self.bc_received = tk.Label(
+            block_panel, text="-",
+            fg="#64b5f6", bg="#2b2b2b",
+            wraplength=250, justify="left"
+        )
+        self.bc_received.pack(anchor="w", pady=4)
+
+        self.bc_status = tk.Label(
+            block_panel,
+            text="Status: Not Verified",
+            fg="white",
+            bg="#444",
+            font=("Helvetica", 10, "bold"),
+            pady=4
+        )
+        self.bc_status.pack(fill="x", pady=6)
+
         tk.Label(nist, text="Overall Compliance",
                  fg="#cccccc", bg="#2b2b2b").pack(anchor="w")
 
@@ -145,7 +188,6 @@ class PQCStegoUI:
             pady=10
         )
         self.status_label.grid(row=2, column=0, columnspan=3, sticky="ew")
-
         self._show_image("images/Cover.png", self.cover_image_label)
 
     # ================= HELPERS =================
@@ -210,6 +252,9 @@ class PQCStegoUI:
             self.kem_public_key, msg_bytes, self.sign_private_key
         )
 
+        cipher_hash = hashlib.sha256(ciphertext).hexdigest()
+        self.blockchain.add_block(cipher_hash)
+
         self.sender_cipher.config(state="normal")
         self.sender_cipher.delete("1.0", tk.END)
         self.sender_cipher.insert(tk.END, base64.b64encode(ciphertext).decode())
@@ -231,6 +276,32 @@ class PQCStegoUI:
     def extract_and_decrypt(self):
         extracted = extract_data("images/stego.png")
 
+        received_hash = hashlib.sha256(extracted).hexdigest()
+        stored_hash = self.blockchain.chain[-1].data
+
+        # Update panel
+        self.bc_stored.config(text=stored_hash)
+        self.bc_received.config(text=received_hash)
+
+        if received_hash != stored_hash:
+            self.bc_status.config(text="Verification Failed", bg="red")
+            self.status_label.config(text="Tampering Detected", bg="red")
+            return
+        else:
+            self.bc_status.config(text="Verified", bg="#2e7d32")
+
+        if received_hash != self.blockchain.chain[-1].data:
+            self.status_label.config(
+                text="BLOCKCHAIN VERIFICATION FAILED!",
+                bg="red"
+            )
+            return
+        else:
+            self.status_label.config(
+                text="BLOCKCHAIN VERIFIED",
+                bg="#2e7d32"
+            )
+
         self.receiver_cipher.config(state="normal")
         self.receiver_cipher.delete("1.0", tk.END)
         self.receiver_cipher.insert(tk.END, base64.b64encode(extracted).decode())
@@ -249,12 +320,10 @@ class PQCStegoUI:
         self.output_text.delete("1.0", tk.END)
         self.output_text.insert(tk.END, plaintext.decode())
         self.output_text.config(state="disabled")
-
         self.status_label.config(
             text="STATUS: DECRYPTION SUCCESSFUL",
             bg="#2e7d32"
         )
-
 
 # ================= MAIN =================
 if __name__ == "__main__":
